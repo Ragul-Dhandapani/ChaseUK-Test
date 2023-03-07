@@ -1,0 +1,8 @@
+.gradle
+.idea
+.eclipse
+.cache
+*.log
+reports
+build
+out

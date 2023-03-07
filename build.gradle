@@ -1,0 +1,102 @@
+plugins {
+    id 'java'
+    id 'io.qameta.allure' version '2.11.0'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+}
+
+java {
+    sourceCompatibility = 11
+    targetCompatibility = 11
+}
+
+dependencies {
+    // Allure Report
+    implementation 'io.qameta.allure:allure-cucumber7-jvm:2.21.0'
+    implementation 'io.qameta.allure:allure-testng:2.21.0'
+    implementation 'io.qameta.allure:allure-rest-assured:2.21.0'
+    implementation 'io.qameta.allure:allure-java-commons:2.21.0'
+
+    // Cucumber
+    implementation('io.cucumber:cucumber-java:7.3.0')
+    implementation 'io.cucumber:cucumber-testng:7.3.0'
+    implementation 'io.cucumber:cucumber-jvm-deps:1.0.6'
+
+    // Cucumber Unit
+    testImplementation 'io.cucumber:cucumber-junit:7.3.0'
+    testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.3.0'
+    implementation 'commons-validator:commons-validator:1.7'
+
+    //testng
+    testImplementation 'org.testng:testng:7.3.0'
+
+    // Rest-Assured
+    implementation group: 'io.rest-assured', name: 'rest-assured', version: '5.1.1'
+    implementation group: 'io.rest-assured', name: 'json-schema-validator', version: '5.1.1'
+
+    //json
+    implementation group: 'com.jayway.jsonpath', name: 'json-path', version: '2.7.0'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
+    implementation group: 'org.json', name: 'json', version: '20220320'
+
+    //lombok with logs
+    implementation 'org.projectlombok:lombok:1.18.22'
+    implementation 'ch.qos.logback:logback-classic:1.4.5'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
+    implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+    runtimeOnly group: 'org.aspectj', name: 'aspectjweaver', version: '1.9.19'
+
+}
+
+test{
+    jvmArgs "javaagent:org/aspectj/aspectjweaver/1.9.19/aspectjweaver-1.9.19.jar\"\n" +
+            "-Dcucumber.options=\"--plugin io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm\""
+}
+
+test {
+    useTestNG()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+/*allure {
+    version = '2.13.8'
+    aspectjweaver = true
+    autoconfigure = true
+}*/
+
+// Configure Allure Report
+configurations {
+    integrationTestImplementation {
+        extendsFrom testImplementation
+    }
+    integrationTestRuntimeOnly {
+        extendsFrom runtimeOnly
+        extendsFrom testRuntimeOnly
+    }
+}
+
+task cucumber() {
+    dependsOn assemble, testClasses
+    doLast {
+        javaexec {
+            systemProperty("allure.results.directory", "build/allure-results")
+            main = "io.cucumber.core.cli.Main" //Cucumber Client to run the tests
+            classpath = configurations.runtimeClasspath + sourceSets.main.output + sourceSets.test.output
+            args = ['--plugin', 'html:results.html',
+                    '--plugin', 'pretty',
+                    '--plugin', 'io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm',
+                    '--glue', 'com.jpmorgan.chase.cucumbertests.definitions',
+                    'src/test/resources/features']
+        }
+    }
+}
+
+cucumber.finalizedBy 'allureReport'
